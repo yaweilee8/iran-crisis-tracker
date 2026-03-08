@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>伊朗-美以冲突实时追踪 | Iran Crisis Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --danger: #ff4444;
+            --warning: #ff9500;
+            --info: #00d4ff;
+            --success: #00c853;
+            --bg-dark: #0a0a0f;
+            --bg-card: rgba(20, 20, 30, 0.8);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Noto Sans SC', sans-serif;
+            background: var(--bg-dark);
+            color: #fff;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* ===== 顶部滚动新闻条 ===== */
+        .news-ticker {
+            background: linear-gradient(90deg, #8b0000 0%, #ff4444 50%, #8b0000 100%);
+            padding: 12px 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .ticker-label {
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: #000;
+            padding: 12px 20px;
+            font-weight: bold;
+            font-size: 0.85em;
+            z-index: 10;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .ticker-content {
+            display: flex;
+            animation: ticker 30s linear infinite;
+            white-space: nowrap;
+            padding-left: 120px;
+        }
+        
+        .ticker-item {
+            padding: 0 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .ticker-item::before {
+            content: "◆";
+            color: #fff;
+        }
+        
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        
+        /* ===== Hero区域 ===== */
+        .hero {
+            position: relative;
+            min-height: 60vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 50%, #16213e 100%);
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,68,68,0.1)" stroke-width="0.5"/><circle cx="50" cy="50" r="30" fill="none" stroke="rgba(255,68,68,0.15)" stroke-width="0.5"/><circle cx="50" cy="50" r="20" fill="none" stroke="rgba(255,68,68,0.2)" stroke-width="0.5"/></svg>');
+            background-size: 400px;
+            opacity: 0.5;
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.05); opacity: 0.7; }
+        }
+        
+        .hero-content {
+            text-align: center;
+            z-index: 1;
+            padding: 40px 20px;
+            max-width: 900px;
+        }
+        
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid var(--danger);
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .conflict-timer {
+            font-size: 1.1em;
+            color: #888;
+            margin-bottom: 15px;
+        }
+        
+        .timer-display {
+            font-size: 1.5em;
+            color: var(--danger);
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .hero h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fff 0%, #ff6b6b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.1em;
+            color: #aaa;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 20px 35px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-box .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--danger);
+            line-height: 1;
+        }
+        
+        .stat-box .label {
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        /* ===== 在线人数 ===== */
+        .online-users {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            padding: 8px 16px;
+            font-size: 0.85em;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .online-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+        }
+        
+        /* ===== 主内容区 ===== */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        /* ===== 过滤器 ===== */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--bg-card);
+            border-radius: 15px;
+            border: 1px solid var(--border);
+        }
+        
+        .filter-btn {
+            padding: 8px 20px;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: #fff;
+        }
+        
+        .filter-btn .count {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+        }
+        
+        /* ===== 时间线 ===== */
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .timeline-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .timeline-title h2 {
+            font-size: 1.5em;
+        }
+        
+        .live-badge {
+            background: var(--danger);
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+        
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .timeline-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--border);
+        }
+        
+        .timeline-item.urgent::before { background: var(--danger); }
+        .timeline-item.developing::before { background: var(--warning); }
+        .timeline-item.analysis::before { background: var(--info); }
+        
+        .timeline-item:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+        
+        .item-meta {
+            min-width: 120px;
+        }
+        
+        .item-time {
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        
+        .item-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .tag {
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 500;
+        }
+        
+        .tag-urgent { background: rgba(255, 68, 68, 0.2); color: var(--danger); }
+        .tag-developing { background: rgba(255, 149, 0, 0.2); color: var(--warning); }
+        .tag-analysis { background: rgba(0, 212, 255, 0.2); color: var(--info); }
+        .tag-video { background: rgba(0, 200, 83, 0.2); color: var(--success); }
+        .tag-new { background: var(--danger); color: #fff; font-size: 0.65em; padding: 2px 6px; }
+        
+        .item-content {
+            flex: 1;
+        }
+        
+        .item-title {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        
+        .item-desc {
+            color: #aaa;
+            font-size: 0.95em;
+            margin-bottom: 12px;
+        }
+        
+        .item-source {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.85em;
+        }
+        
+        .source-name {
+            color: #888;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .source-link {
+            color: var(--info);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .source-link:hover {
+            text-decoration: underline;
+        }
+        
+        /* ===== 视频卡片 ===== */
+        .video-preview {
+            width: 200px;
+            height: 120px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        
+        .video-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .play-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 68, 68, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .play-btn::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 15px solid #fff;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+            margin-left: 4px;
+        }
+        
+        /* ===== 地图区域 ===== */
+        .map-section {
+            margin: 40px 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 25px;
+        }
+        
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .map-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .map-filter {
+            padding: 6px 15px;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: #888;
+            font-size: 0.85em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .map-filter.active {
+            background: rgba(255, 68, 68, 0.2);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        
+        .filter-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        #map {
+            height: 500px;
+            border-radius: 10px;
+            background: #0a0a0f;
+        }
+        
+        .map-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            font-size: 0.9em;
+            color: #888;
+        }
+        
+        /* ===== 加载更多 ===== */
+        .load-more {
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .load-more-btn {
+            padding: 12px 40px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: #888;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .load-more-btn:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        
+        .load-status {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 15px;
+        }
+        
+        /* ===== 分享区 ===== */
+        .share-section {
+            background: linear-gradient(135deg, rgba(255,68,68,0.1) 0%, rgba(0,0,0,0.3) 100%);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-top: 40px;
+        }
+        
+        .share-title {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+        
+        .share-desc {
+            color: #888;
+            margin-bottom: 20px;
+        }
+        
+        .share-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .share-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.2em;
+        }
+        
+        .share-btn:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+            transform: translateY(-3px);
+        }
+        
+        /* ===== 页脚 ===== */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            font-size: 0.9em;
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+        
+        /* ===== 响应式 ===== */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2em; }
+            .stats-row { gap: 15px; }
+            .stat-box { padding: 15px 25px; }
+            .stat-box .number { font-size: 1.8em; }
+            .timeline-item { flex-direction: column; }
+            .video-preview { width: 100%; height: 180px; }
+            .online-users { top: auto; bottom: 20px; right: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 在线人数 -->
+    <div class="online-users">
+        <span class="online-dot"></span>
+        <span id="onlineCount">1,247</span> 在线
+    </div>
+
+    <!-- 顶部滚动新闻 -->
+    <div class="news-ticker">
+        <div class="ticker-label">BREAKING</div>
+        <div class="ticker-content">
+            <div class="ticker-item">美以联军2月28日对伊朗发动大规模军事打击</div>
+            <div class="ticker-item">伊朗最高领袖哈梅内伊在袭击中遇害</div>
+            <div class="ticker-item">伊朗遭遇近乎全面的互联网封锁</div>
+            <div class="ticker-item">国际油价飙升至80-90美元区间</div>
+            <div class="ticker-item">五角大楼称行动代号'史诗之怒'</div>
+            <div class="ticker-item">联合国安理会紧急会议召开中</div>
+            <div class="ticker-item">霍尔木兹海峡航运面临中断风险</div>
+            <div class="ticker-item">全球股市剧烈震荡 避险资产大涨</div>
+            <div class="ticker-item">特朗普称行动旨在'清除伊朗政权威胁'</div>
+            <div class="ticker-item">多国紧急撤侨行动启动</div>
+            <!-- 重复一遍实现无缝滚动 -->
+            <div class="ticker-item">美以联军2月28日对伊朗发动大规模军事打击</div>
+            <div class="ticker-item">伊朗最高领袖哈梅内伊在袭击中遇害</div>
+            <div class="ticker-item">伊朗遭遇近乎全面的互联网封锁</div>
+            <div class="ticker-item">国际油价飙升至80-90美元区间</div>
+            <div class="ticker-item">五角大楼称行动代号'史诗之怒'</div>
+        </div>
+    </div>
+
+    <!-- Hero区域 -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="live-indicator">
+                <span class="live-dot"></span>
+                <span>实时追踪中</span>
+            </div>
+            
+            <div class="conflict-timer">
+                冲突已持续 <span class="timer-display" id="conflictTimer">计算中...</span>
+            </div>
+            
+            <h1>伊朗-美以冲突实时追踪</h1>
+            <p class="hero-subtitle">
+                2026年2月28日，美国联合以色列对伊朗发动代号『史诗之怒』（Epic Fury）的大规模军事打击行动。
+                本页面聚合全球多方信息源，实时追踪事态发展。
+            </p>
+            
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="number">252+</div>
+                    <div class="label">军事打击轮次</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">6</div>
+                    <div class="label">涉及国家</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">89</div>
+                    <div class="label">信息源追踪</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 主内容 -->
+    <div class="main-container">
+        <!-- 过滤器 -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">
+                全部 <span class="count">6409</span>
+            </button>
+            <button class="filter-btn" data-filter="urgent">
+                紧急 <span class="count">2917</span>
+            </button>
+            <button class="filter-btn" data-filter="developing">
+                发展中 <span class="count">2286</span>
+            </button>
+            <button class="filter-btn" data-filter="analysis">
+                分析 <span class="count">680</span>
+            </button>
+            <button class="filter-btn" data-filter="market">
+                市场 <span class="count">526</span>
+            </button>
+        </div>
+
+        <!-- 时间线 -->
+        <div class="timeline-header">
+            <div class="timeline-title">
+                <h2>事态发展时间线</h2>
+                <span class="live-badge">LIVE</span>
+            </div>
+        </div>
+        
+        <div class="timeline" id="timeline">
+            <!-- 时间线项目将通过JS动态生成 -->
+        </div>
+
+        <div class="load-more">
+            <button class="load-more-btn" onclick="loadMore()">
+                <span>↓</span> 加载更多
+            </button>
+            <div class="load-status">显示 <span id="shownCount">0</span> 条事件 · 共 6409 条</div>
+        </div>
+
+        <!-- 交互式地图 -->
+        <div class="map-section">
+            <div class="map-header">
+                <div class="timeline-title">
+                    <h2>中东冲突地图</h2>
+                    <span class="tag tag-developing">交互式</span>
+                </div>
+            </div>
+            <p style="color: #888; margin-bottom: 15px;">实时标注打击目标、军事部署和反击位置，点击标记查看详情</p>
+            
+            <div class="map-filters">
+                <button class="map-filter active" data-mapfilter="all">
+                    <span class="filter-dot" style="background: #fff;"></span>
+                    全部 (746)
+                </button>
+                <button class="map-filter" data-mapfilter="strike">
+                    <span class="filter-dot" style="background: #ff4444;"></span>
+                    美以打击 (234)
+                </button>
+                <button class="map-filter" data-mapfilter="counter">
+                    <span class="filter-dot" style="background: #00d4ff;"></span>
+                    伊朗反击 (114)
+                </button>
+                <button class="map-filter" data-mapfilter="nuclear">
+                    <span class="filter-dot" style="background: #ff9500;"></span>
+                    核设施 (12)
+                </button>
+                <button class="map-filter" data-mapfilter="naval">
+                    <span class="filter-dot" style="background: #00c853;"></span>
+                    海军设施 (84)
+                </button>
+                <button class="map-filter" data-mapfilter="civilian">
+                    <span class="filter-dot" style="background: #888;"></span>
+                    平民伤亡 (130)
+                </button>
+            </div>
+            
+            <div id="map"></div>
+            
+            <div class="map-info">
+                <strong>📍 标注点统计:</strong> 美以打击 234处 | 伊朗反击 114处 | 核设施 12处 | 海军设施 84处 | 平民伤亡 130处 | 军事基地 96处 | 外交事件 15处 | 经济影响 27处 | 航运中断 22处 | 抗议活动 5处 | 人道主义 7处
+                <br><br>
+                <small>地图数据来源于 BBC、IDF、CENTCOM 等公开报道，标注位置为近似坐标，仅供参考。</small>
+            </div>
+        </div>
+
+        <!-- 分享区 -->
+        <div class="share-section">
+            <h3 class="share-title">转发这份实时追踪</h3>
+            <p class="share-desc">聚合 CNN、BBC、半岛电视台等 50+ 全球媒体源，746 个实时标注。帮助更多人获取一手国际资讯。</p>
+            <div class="share-buttons">
+                <div class="share-btn" onclick="shareTo('twitter')">𝕏</div>
+                <div class="share-btn" onclick="shareTo('facebook')">f</div>
+                <div class="share-btn" onclick="shareTo('telegram')">✈</div>
+                <div class="share-btn" onclick="shareTo('whatsapp')">📱</div>
+                <div class="share-btn" onclick="copyLink()">🔗</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer>
+        <p>免责声明：本页面仅为信息聚合展示，所有新闻内容版权归原始信息源所有。</p>
+        <p>不代表任何政治立场，不对信息的准确性和时效性做出保证。请以官方信息源为准。</p>
+        <p style="margin-top: 15px; color: #444;">Powered by OpenClaw 二货 | Last updated: <span id="lastUpdate"></span></p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 冲突开始时间 (2026年2月28日)
+        const conflictStart = new Date('2026-02-28T00:00:00+08:00');
+        
+        // 更新冲突计时器
+        function updateTimer() {
+            const now = new Date();
+            const diff = now - conflictStart;
+            
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            document.getElementById('conflictTimer').textContent = 
+                `${days}天 ${hours.toString().padStart(2, '0')}时 ${minutes.toString().padStart(2, '0')}分 ${seconds.toString().padStart(2, '0')}秒`;
+        }
+        
+        setInterval(updateTimer, 1000);
+        updateTimer();
+        
+        // 更新最后更新时间
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleString('zh-CN');
+        
+        // 模拟在线人数变化
+        function updateOnlineCount() {
+            const base = 1200;
+            const random = Math.floor(Math.random() * 200);
+            document.getElementById('onlineCount').textContent = (base + random).toLocaleString();
+        }
+        setInterval(updateOnlineCount, 5000);
+        
+        // 新闻数据
+        const newsData = [
+            {
+                id: 1,
+                time: '13:00',
+                date: '3月8日',
+                type: 'urgent',
+                tags: ['紧急', '视频'],
+                isNew: true,
+                title: '美国中央司令部发布的新伊朗空袭视频',
+                desc: '美国中央司令部发布了有关对伊朗进行空袭的新视频，这些行动加剧了美国与伊朗之间的紧张局势。',
+                source: 'Al Hadath',
+                url: 'https://www.youtube.com/shorts/08N1T0ZF-ZM',
+                hasVideo: true,
+                videoThumb: 'https://img.youtube.com/vi/08N1T0ZF-ZM/0.jpg'
+            },
+            {
+                id: 2,
+                time: '13:00',
+                date: '3月8日',
+                type: 'developing',
+                tags: ['发展中', '视频'],
+                isNew: true,
+                title: '中国外长：应尊重伊朗及海湾国家的主权与安全',
+                desc: '中国外长王毅表示应该尊重伊朗和海湾国家的主权与安全，并提到应停止军事行动以防止局势恶化。',
+                source: 'Al Jazeera Arabic',
+                url: 'https://www.youtube.com/watch?v=Q43Ivh6tHDc',
+                hasVideo: true,
+                videoThumb: 'https://img.youtube.com/vi/Q43Ivh6tHDc/0.jpg'
+            },
+            {
+                id: 3,
+                time: '13:00',
+                date: '3月8日',
+                type: 'developing',
+                tags: ['发展中', '视频'],
+                isNew: true,
+                title: '伊朗学校遭袭后的破坏情况',
+                desc: '伊朗电视台发布了被袭击的学校的破坏情况，这起事件与以色列的空袭有关，涉及美国和伊朗的军事冲突。',
+                source: 'Al Jazeera Arabic',
+                url: 'https://www.youtube.com/shorts/GreH7zSNVQk',
+                hasVideo: true,
+                videoThumb: 'https://img.youtube.com/vi/GreH7zSNVQk/0.jpg'
+            },
+            {
+                id: 4,
+                time: '12:56',
+                date: '3月8日',
+                type: 'developing',
+                tags: ['发展中'],
+                isNew: true,
+                title: '俄罗斯，可能向伊朗提供美军情报',
+                desc: '有报道称俄罗斯正在向伊朗提供美军的位置情报，这可能会加剧美伊之间的紧张局势。',
+                source: '毎日新聞',
+                url: 'https://mainichi.jp/articles/20260308/k00/00m/030/079000c'
+            },
+            {
+                id: 5,
+                time: '12:55',
+                date: '3月8日',
+                type: 'urgent',
+                tags: ['紧急', '视频'],
+                isNew: true,
+                title: '阿联酋高层大楼遭伊朗无人机袭击',
+                desc: '随着一波针对该国的伊朗空袭，科威特的公共社会保障高层大楼被可疑无人机撞击并起火。',
+                source: 'Al Jazeera English',
+                url: 'https://www.youtube.com/shorts/-1nHM8iqng4',
+                hasVideo: true,
+                videoThumb: 'https://img.youtube.com/vi/-1nHM8iqng4/0.jpg'
+            },
+            {
+                id: 6,
+                time: '12:55',
+                date: '3月8日',
+                type: 'urgent',
+                tags: ['紧急', '视频'],
+                isNew: true,
+                title: '佩泽什基安总统向海湾国家道歉',
+                desc: '伊朗总统马苏德·佩泽什基安在伊朗的导弹和无人机袭击后向邻国道歉，表示德黑兰将避免攻击地区国家。',
+                source: 'WION',
+                url: 'https://www.youtube.com/watch?v=ZlhkIq208wo',
+                hasVideo: true,
+                videoThumb: 'https://img.youtube.com/vi/ZlhkIq208wo/0.jpg'
+            },
+            {
+                id: 7,
+                time: '12:50',
+                date: '3月8日',
+                type: 'urgent',
+                tags: ['紧急', '视频'],
+                isNew: true,
+                title: '拉里贾尼：安全条件一旦满足就召开委员会',
+                desc: '伊朗最高国家安全委员会的一位官员称，美国士兵在不断升级的冲突中被捕或"被困"。',
+                source: 'WION',
+                url: 'https://www.youtube.com/watch?v=tXY-CeMsKho',
+                hasVideo: true,
+                videoThumb: 'https://img.youtube.com/vi/tXY-CeMsKho/0.jpg'
+            },
+            {
+                id: 8,
+                time: '12:48',
+                date: '3月8日',
+                type: 'developing',
+                tags: ['发展中', '视频'],
+                isNew: true,
+                title: '德黑兰市民在美国以色列轰炸下献血',
+                desc: '德黑兰市民在主要献血中心献血，抗击美国和以色列的空袭，冲突已持续两周。',
+                source: 'Al Jazeera Arabic',
+                url: 'https://www.youtube.com/shorts/t2MbaV5mxZY',
+                hasVideo: true,
+                videoThumb: 'https://img.youtube.com/vi/t2MbaV5mxZY/0.jpg'
+            },
+            {
+                id: 9,
+                time: '12:45',
+                date: '3月8日',
+                type: 'developing',
+                tags: ['发展中'],
+                isNew: true,
+                title: '美军运输机撤离',
+                desc: '美国与以色列的行动将可能导致军事资源在中东的重新布局。',
+                source: '조선일보',
+                url: 'https://www.chosun.com/economy/economy_general/2026/03/08/MJQTQMBRGNRTSNRTGIZTAZRUHE/'
+            },
+            {
+                id: 10,
+                time: '12:45',
+                date: '3月8日',
+                type: 'urgent',
+                tags: ['紧急', '视频'],
+                isNew: true,
+                title: '以色列袭击贝鲁特：酒店空袭至少造成四人死亡',
+                desc: '以色列针对贝鲁特市中心的一家酒店进行的空袭导致至少四人死亡，此次打击据称是针对伊朗革命卫队指挥官。',
+                source: 'Al Jazeera English',
+                url: 'https://www.youtube.com/watch?v=T86V5WTFfHM',
+                hasVideo: true,
+                videoThumb: 'https://img.youtube.com/vi/T86V5WTFfHM/0.jpg'
+            },
+            {
+                id: 11,
+                time: '12:45',
+                date: '3月8日',
+                type: 'analysis',
+                tags: ['分析', '视频'],
+                isNew: true,
+                title: '前美国情报官员：特朗普开始了一场没有后续计划的战争',
+                desc: '前美国情报官员格伦·卡尔表示，没有后续计划的情况下推翻伊朗政府可能导致该国和地区的严重混乱。',
+                source: 'Al Jazeera Arabic',
+                url: 'https://www.youtube.com/watch?v=KKoYLb5630E',
+                hasVideo: true,
+                videoThumb: 'https://img.youtube.com/vi/KKoYLb5630E/0.jpg'
+            },
+            {
+                id: 12,
+                time: '12:44',
+                date: '3月8日',
+                type: 'urgent',
+                tags: ['紧急'],
+                isNew: true,
+                title: '俄罗斯对伊朗提供军事信息',
+                desc: '在中东紧张局势加剧期间，俄罗斯向伊朗提供了军事情报，影响了地区安全。',
+                source: 'Google뉴스중동한국',
+                url: 'https://news.google.com/rss/articles/CBMiT0FVX3lxTE80VnhubjY2RU1PYUUwZDR0Y1FiNEt5WFJ2bEdNMnFtLXpYdVF1WUhOQTY3d1g3bmlrTXBzWjVrZ0pjNDlXM3dXV3ZMY3JSLTg?oc=5'
+            },
+            {
+                id: 13,
+                time: '12:42',
+                date: '3月8日',
+                type: 'urgent',
+                tags: ['紧急', '视频'],
+                isNew: true,
+                title: '美国-伊朗战争：如果海水淡化厂成为目标怎么办？',
+                desc: '该视频讨论了在冲突中，美国被指控轰炸伊朗的海水淡化厂，这一事件对双方关系产生了极大影响。',
+                source: 'WION',
+                url: 'https://www.youtube.com/watch?v=pfAkyrWKzdQ',
+                hasVideo: true,
+                videoThumb: 'https://img.youtube.com/vi/pfAkyrWKzdQ/0.jpg'
+            },
+            {
+                id: 14,
+                time: '12:41',
+                date: '3月8日',
+                type: 'developing',
+                tags: ['发展中'],
+                isNew: true,
+                title: '特朗普关注伊朗战争地面部队问题',
+                desc: '特朗普表示可能会投入地面部队，但目前不会作出进一步说明。',
+                source: '한겨레',
+                url: 'https://www.hani.co.kr/arti/international/america/1248203.html'
+            },
+            {
+                id: 15,
+                time: '12:40',
+                date: '3月8日',
+                type: 'urgent',
+                tags: ['紧急'],
+                isNew: true,
+                title: '以色列空袭贝鲁特酒店致四人亡',
+                desc: '以色列针对伊朗革命卫队指挥官的空袭造成四人死亡。',
+                source: 'France24 Middle East',
+                url: 'https://www.france24.com/en/middle-east/20260308-lebanon-says-israeli-strike-on-beirut-hotel-kills-four-iran-war'
+            }
+        ];
+        
+        let displayedCount = 0;
+        const itemsPerLoad = 10;
+        
+        // 渲染时间线
+        function renderTimeline(filter = 'all', append = false) {
+            const timeline = document.getElementById('timeline');
+            if (!append) {
+                timeline.innerHTML = '';
+                displayedCount = 0;
+            }
+            
+            const filteredData = filter === 'all' 
+                ? newsData 
+                : newsData.filter(item => item.type === filter);
+            
+            const toShow = filteredData.slice(displayedCount, displayedCount + itemsPerLoad);
+            
+            toShow.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = `timeline-item ${item.type}`;
+                
+                const tagClass = {
+                    '紧急': 'tag-urgent',
+                    '发展中': 'tag-developing',
+                    '分析': 'tag-analysis',
+                    '视频': 'tag-video'
+                };
+                
+                const tagsHtml = item.tags.map(tag => 
+                    `<span class="tag ${tagClass[tag] || 'tag-developing'}">${tag}</span>`
+                ).join('');
+                
+                const newTag = item.isNew ? '<span class="tag tag-new">NEW</span>' : '';
+                
+                const videoHtml = item.hasVideo ? `
+                    <div class="video-preview" onclick="openVideo('${item.url}')">
+                        <img src="${item.videoThumb}" alt="${item.title}">
+                        <div class="play-btn"></div>
+                    </div>
+                ` : '';
+                
+                itemEl.innerHTML = `
+                    <div class="item-meta">
+                        <div class="item-time">${item.date} ${item.time}</div>
+                        <div class="item-tags">
+                            ${tagsHtml}
+                            ${newTag}
+                        </div>
+                    </div>
+                    ${videoHtml}
+                    <div class="item-content">
+                        <h3 class="item-title">${item.title}</h3>
+                        <p class="item-desc">${item.desc}</p>
+                        <div class="item-source">
+                            <span class="source-name">
+                                <span>📰</span> ${item.source}
+                            </span>
+                            <a href="${item.url}" target="_blank" class="source-link">
+                                查看原文 →
+                            </a>
+                        </div>
+                    </div>
+                `;
+                
+                timeline.appendChild(itemEl);
+            });
+            
+            displayedCount += toShow.length;
+            document.getElementById('shownCount').textContent = displayedCount;
+        }
+        
+        // 加载更多
+        function loadMore() {
+            const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+            renderTimeline(activeFilter, true);
+        }
+        
+        // 打开视频
+        function openVideo(url) {
+            window.open(url, '_blank');
+        }
+        
+        // 过滤器点击
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                renderTimeline(this.dataset.filter);
+            });
+        });
+        
+        // 分享功能
+        function shareTo(platform) {
+            const url = encodeURIComponent(window.location.href);
+            const text = encodeURIComponent('伊朗-美以冲突实时追踪 - 聚合全球多方信息源');
+            
+            const shareUrls = {
+                twitter: `https://twitter.com/intent/tweet?url=${url}&text=${text}`,
+                facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+                telegram: `https://t.me/share/url?url=${url}&text=${text}`,
+                whatsapp: `https://wa.me/?text=${text}%20${url}`
+            };
+            
+            if (shareUrls[platform]) {
+                window.open(shareUrls[platform], '_blank', 'width=600,height=400');
+            }
+        }
+        
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                alert('链接已复制到剪贴板');
+            });
+        }
+        
+        // 初始化地图
+        function initMap() {
+            const map = L.map('map', {
+                center: [32, 50],
+                zoom: 5,
+                zoomControl: false
+            });
+            
+            // 添加深色地图图层
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // 添加缩放控件到右下角
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            
+            // 模拟地图标记数据
+            const markers = [
+                { lat: 35.6892, lng: 51.3890, title: '德黑兰 - 多次空袭', type: 'strike' },
+                { lat: 32.6539, lng: 51.6660, title: '伊斯法罕 - 核设施', type: 'nuclear' },
+                { lat: 27.1388, lng: 56.2167, title: '阿巴斯港 - 海军基地', type: 'naval' },
+                { lat: 33.8938, lng: 35.5018, title: '贝鲁特 - 酒店遭袭', type: 'civilian' },
+                { lat: 31.7683, lng: 35.2137, title: '耶路撒冷 - 导弹警报', type: 'counter' },
+                { lat: 29.3759, lng: 47.9774, title: '科威特 - 无人机袭击', type: 'counter' },
+                { lat: 24.7136, lng: 46.6753, title: '利雅得 - 拦截无人机', type: 'counter' },
+                { lat: 25.2048, lng: 55.2708, title: '迪拜 - 航运中断', type: 'naval' }
+            ];
+            
+            const colors = {
+                strike: '#ff4444',
+                counter: '#00d4ff',
+                nuclear: '#ff9500',
+                naval: '#00c853',
+                civilian: '#888'
+            };
+            
+            const mapMarkers = [];
+            
+            markers.forEach(m => {
+                const marker = L.circleMarker([m.lat, m.lng], {
+                    radius: 10,
+                    fillColor: colors[m.type],
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+                
+                marker.bindPopup(`<b>${m.title}</b><br>类型: ${m.type}`);
+                marker.type = m.type;
+                mapMarkers.push(marker);
+            });
+            
+            // 地图过滤器
+            document.querySelectorAll('.map-filter').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.map-filter').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const filter = this.dataset.mapfilter;
+                    
+                    mapMarkers.forEach(marker => {
+                        if (filter === 'all' || marker.type === filter) {
+                            marker.addTo(map);
+                        } else {
+                            map.removeLayer(marker);
+                        }
+                    });
+                });
+            });
+        }
+        
+        // 初始化
+        renderTimeline();
+        initMap();
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+[build]
+  publish = "."
+  command = "echo 'Static site - no build needed'"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/"
+  to = "/iran-tracker-v2.html"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/iran-tracker-v2.html"
+  status = 200
